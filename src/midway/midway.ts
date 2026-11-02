@@ -30,6 +30,8 @@ import {
   createWalker,
   findPath,
   followPath,
+  hatCartInReach,
+  isHatCart,
   inputDirection,
   layoutMidway,
   pathToBooth,
@@ -49,6 +51,10 @@ export interface MidwayOptions {
   onPlay(gameId: string): void;
   /** Called whenever the booth in reach changes. */
   onReach(booth: BoothSlot | undefined): void;
+  /** Called when the player asks to shop at the hat cart they're standing at. */
+  onShop(): void;
+  /** Called whenever the hat cart in reach changes. */
+  onHatCartReach(inReach: boolean): void;
 }
 
 export interface MidwayControls {
@@ -109,6 +115,7 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
   const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let nextFloater = 2;
   let inReach: BoothSlot | undefined;
+  let hatCart: Prop | undefined;
   let destination: Point | undefined;
 
   let dpr = 1;
@@ -159,6 +166,9 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
     } else if (PLAY_KEYS.has(event.code) && !isControl(event.target) && inReach?.gameId) {
       event.preventDefault();
       play(inReach);
+    } else if (PLAY_KEYS.has(event.code) && !isControl(event.target) && !inReach && hatCart) {
+      event.preventDefault();
+      options.onShop();
     }
   };
   const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code);
@@ -186,7 +196,16 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
       return point.x >= b.left && point.x <= b.right && point.y >= b.top && point.y <= b.bottom;
     });
 
-  const walkToBooth = (booth: BoothSlot) => {
+  const hatCartAt = (point: Point) =>
+    map.props
+      .filter((prop) => {
+        if (!isHatCart(prop)) return false;
+        const b = propBounds(prop);
+        return point.x >= b.left && point.x <= b.right && point.y >= b.top && point.y <= b.bottom;
+      })
+      .sort((a, b) => b.x + b.y - (a.x + a.y))[0];
+
+  const walkToBooth = (booth: BoothSlot | Prop) => {
     player.path = pathToBooth(map, player, booth) ?? [];
     destination = player.path.at(-1);
   };
@@ -203,6 +222,12 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
       else walkToBooth(booth);
       return;
     }
+    const cart = hatCartAt(point);
+    if (cart) {
+      if (cart === hatCart && !inReach) options.onShop();
+      else walkToBooth(cart);
+      return;
+    }
     const path = findPath(map, player, toTile(point.x, point.y));
     if (path) {
       player.path = path;
@@ -211,7 +236,8 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
   };
   const onPointerMove = (event: PointerEvent) => {
     const point = toWorld(event);
-    canvas.style.cursor = boothAt(point) || billboardAt(point) ? 'pointer' : 'default';
+    canvas.style.cursor =
+      boothAt(point) || hatCartAt(point) || billboardAt(point) ? 'pointer' : 'default';
   };
 
   window.addEventListener('keydown', onKeyDown);
@@ -388,6 +414,10 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
         (c.x - cam.x) * zoom,
         (c.y - BOOTH_SIGN_HEIGHT - 46 - cam.y) * zoom,
       );
+    } else if (hatCart) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const c = toScreen(hatCart.x + 0.5, hatCart.y + 0.5);
+      label(ctx, 'Press E to shop', (c.x - cam.x) * zoom, (c.y - 66 - cam.y) * zoom);
     }
   };
 
@@ -426,6 +456,11 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
     if (reach !== inReach) {
       inReach = reach;
       options.onReach(reach);
+    }
+    const cart = reach ? undefined : hatCartInReach(map, player);
+    if (cart !== hatCart) {
+      hatCart = cart;
+      options.onHatCartReach(cart !== undefined);
     }
 
     updateFloaters(dt);

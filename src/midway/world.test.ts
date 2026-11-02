@@ -6,6 +6,8 @@ import {
   createWalker,
   findPath,
   followPath,
+  hatCartInReach,
+  isHatCart,
   inputDirection,
   isBlocked,
   layoutMidway,
@@ -164,6 +166,21 @@ describe('boothInReach', () => {
     const booth = map.booths[0];
     expect(boothInReach(map, { x: booth.x + 1, y: booth.y + booth.h + 0.5 })).toBe(booth);
     expect(boothInReach(map, map.spawn)).toBeUndefined();
+  });
+});
+
+describe('hatCartInReach', () => {
+  it('finds a hat cart the player can walk up to, and nothing out in the open', () => {
+    const map = layoutMidway(['water-cannon']);
+    const carts = map.props.filter(isHatCart);
+    expect(carts.length).toBeGreaterThan(0);
+    for (const cart of carts) {
+      const path = pathToBooth(map, map.spawn, cart);
+      expect(path).toBeDefined();
+      expect(hatCartInReach(map, path!.at(-1)!)).toBe(cart);
+      expect(boothInReach(map, path!.at(-1)!)).toBeUndefined();
+    }
+    expect(hatCartInReach(map, map.spawn)).toBeUndefined();
   });
 });
 
