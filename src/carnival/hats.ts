@@ -77,8 +77,11 @@ export function createHatShop(storage: HatStorage, tickets: Pick<TicketWallet, '
     return load().owned.includes(id);
   }
 
+  // The worn hat, kept in memory so the midway can read it every frame.
+  let worn = load().worn;
+
   function wornHat(): string | undefined {
-    return load().worn;
+    return worn;
   }
 
   /** Buys a hat, or returns false and spends nothing when it's owned already or too dear. */
@@ -96,11 +99,13 @@ export function createHatShop(storage: HatStorage, tickets: Pick<TicketWallet, '
     const wardrobe = load();
     if (!wardrobe.owned.includes(id)) return false;
     save({ ...wardrobe, worn: id });
+    worn = id;
     return true;
   }
 
   function takeOffHat() {
     save({ owned: load().owned });
+    worn = undefined;
   }
 
   return { ownedHats, ownsHat, wornHat, buyHat, wearHat, takeOffHat };
