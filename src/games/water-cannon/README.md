@@ -23,7 +23,9 @@ goes back to the start of its rail, after being soaked or after wrapping off
 screen, it has a 1 in 5 chance to turn gold. Only one target is golden at a
 time, and targets on the middle and bottom rails never turn gold. Soaking a
 golden target scores 10x its normal points: 300 instead of 30. It stays gold
-until it is soaked or wraps off screen, then goes back to normal.
+until it is soaked or wraps off screen. Then it goes back to normal and rolls
+the same 1 in 5 chance as any other top-rail target going back to the start,
+so it can come straight back gold.
 
 Your final score is saved to the carnival's score board when the game ends.
 
