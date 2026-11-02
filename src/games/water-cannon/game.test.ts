@@ -77,4 +77,80 @@ describe('water cannon', () => {
     const fast = scoreForHit({ ...target, speed: -180 });
     expect(Math.max(fast, slow)).toBeGreaterThanOrEqual(slow);
   });
+
+  describe('golden targets', () => {
+    const always = () => 0;
+    const never = () => 0.99;
+    const topRail = (state: ReturnType<typeof createState>) =>
+      state.targets.filter((t) => t.y === state.targets[0].y);
+
+    it('starts with no golden targets', () => {
+      expect(createState().targets.some((t) => t.golden)).toBe(false);
+    });
+
+    it('turns a top-rail target gold when it wraps back to the start, 1 time in 5', () => {
+      const state = createState();
+      const [top] = topRail(state);
+      state.targets = [top];
+      top.x = 2000;
+      step(state, 0, () => 0.19);
+      expect(top.golden).toBe(true);
+
+      const missed = createState();
+      const [other] = topRail(missed);
+      missed.targets = [other];
+      other.x = 2000;
+      step(missed, 0, () => 0.2);
+      expect(other.golden).toBe(false);
+    });
+
+    it('turns a top-rail target gold when it is soaked', () => {
+      const state = createState();
+      const [top] = topRail(state);
+      state.targets = [top];
+      state.shots = [{ x: top.x, y: top.y, vx: 0, vy: 0 }];
+      step(state, 0, always);
+      expect(top.golden).toBe(true);
+    });
+
+    it('never turns a middle or bottom rail target gold', () => {
+      const state = createState();
+      const lower = state.targets.filter((t) => t.y !== state.targets[0].y);
+      state.targets = lower;
+      for (const t of lower) t.x = t.speed > 0 ? 2000 : -2000;
+      step(state, 0, always);
+      expect(lower.some((t) => t.golden)).toBe(false);
+    });
+
+    it('allows only one golden target at a time', () => {
+      const state = createState();
+      state.targets = topRail(state);
+      for (const t of state.targets) t.x = 2000;
+      step(state, 0, always);
+      expect(state.targets.filter((t) => t.golden)).toHaveLength(1);
+    });
+
+    it('scores 10x for a golden target and then goes back to normal', () => {
+      const state = createState();
+      const [top] = topRail(state);
+      const normal = scoreForHit(top);
+      top.golden = true;
+      expect(scoreForHit(top)).toBe(normal * 10);
+      state.targets = [top];
+      state.shots = [{ x: top.x, y: top.y, vx: 0, vy: 0 }];
+      step(state, 0, never);
+      expect(state.score).toBe(300);
+      expect(top.golden).toBe(false);
+    });
+
+    it('stops being gold when it wraps off screen', () => {
+      const state = createState();
+      const [top] = topRail(state);
+      top.golden = true;
+      state.targets = [top];
+      top.x = 2000;
+      step(state, 0, never);
+      expect(top.golden).toBe(false);
+    });
+  });
 });

@@ -11,6 +11,10 @@ const RAILS = [
   { y: 290, speed: 60, radius: 34 },
 ];
 const TARGETS_PER_RAIL = 3;
+/** The top rail (the back row) is the only one whose targets can turn gold. */
+const TOP_RAIL_Y = RAILS[0].y;
+export const GOLDEN_CHANCE = 1 / 5;
+export const GOLDEN_MULTIPLIER = 10;
 
 export interface Target {
   x: number;
@@ -18,6 +22,8 @@ export interface Target {
   radius: number;
   /** Pixels per second; negative moves left. */
   speed: number;
+  /** A golden target scores 10x its normal points until it is soaked or wraps. */
+  golden?: boolean;
 }
 
 export interface Shot {
@@ -55,9 +61,29 @@ export function createState(): WaterCannonState {
   return { targets, shots: [], splashes: [], tank: TANK_SIZE, score: 0, phase: 'playing' };
 }
 
-/** Faster targets are worth more: 10 points per 60 px/s, rounded up. */
+/**
+ * Faster targets are worth more: 10 points per 60 px/s, rounded up.
+ * A golden target is worth 10x that.
+ */
 export function scoreForHit(target: Target): number {
-  return 10 * Math.ceil(Math.abs(target.speed) / 60);
+  const points = 10 * Math.ceil(Math.abs(target.speed) / 60);
+  return target.golden ? points * GOLDEN_MULTIPLIER : points;
+}
+
+/**
+ * Called each time a target goes back to the start of its rail. A golden target
+ * goes back to normal, and a top-rail target has a 1 in 5 chance to turn gold
+ * when no other target is golden.
+ */
+export function returnToStart(
+  state: WaterCannonState,
+  target: Target,
+  random: () => number = Math.random,
+): void {
+  target.golden = false;
+  if (target.y !== TOP_RAIL_Y) return;
+  if (state.targets.some((t) => t.golden)) return;
+  if (random() < GOLDEN_CHANCE) target.golden = true;
 }
 
 export function isHit(shot: Shot, target: Target): boolean {
@@ -80,12 +106,25 @@ export function fire(state: WaterCannonState, aimX: number, aimY: number): boole
   return true;
 }
 
-/** Advances the game by `dt` seconds. */
-export function step(state: WaterCannonState, dt: number): void {
+/**
+ * Advances the game by `dt` seconds. `random` decides when top-rail targets
+ * turn gold; tests can pass their own.
+ */
+export function step(
+  state: WaterCannonState,
+  dt: number,
+  random: () => number = Math.random,
+): void {
   for (const target of state.targets) {
     target.x += target.speed * dt;
-    if (target.x > WIDTH + target.radius) target.x = -target.radius;
-    if (target.x < -target.radius) target.x = WIDTH + target.radius;
+    if (target.x > WIDTH + target.radius) {
+      target.x = -target.radius;
+      returnToStart(state, target, random);
+    }
+    if (target.x < -target.radius) {
+      target.x = WIDTH + target.radius;
+      returnToStart(state, target, random);
+    }
   }
 
   const remaining: Shot[] = [];
@@ -98,6 +137,7 @@ export function step(state: WaterCannonState, dt: number): void {
       state.splashes.push({ x: target.x, y: target.y, age: 0 });
       // Send the soaked target back to the start of its rail.
       target.x = target.speed > 0 ? -target.radius : WIDTH + target.radius;
+      returnToStart(state, target, random);
     } else if (shot.y > -10 && shot.x > -10 && shot.x < WIDTH + 10) {
       remaining.push(shot);
     }
@@ -133,7 +173,8 @@ function draw(
   }
 
   for (const target of state.targets) {
-    ctx.fillStyle = colors.stripeB;
+    const outer = target.golden ? colors.accent : colors.stripeB;
+    ctx.fillStyle = outer;
     ctx.beginPath();
     ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -141,13 +182,13 @@ function draw(
     ctx.beginPath();
     ctx.arc(target.x, target.y, target.radius * 0.6, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = colors.stripeB;
+    ctx.fillStyle = outer;
     ctx.beginPath();
     ctx.arc(target.x, target.y, target.radius * 0.25, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  ctx.fillStyle = '#4fc3f7';
+  ctx.fillStyle = colors.water;
   for (const shot of state.shots) {
     ctx.beginPath();
     ctx.arc(shot.x, shot.y, 5, 0, Math.PI * 2);
