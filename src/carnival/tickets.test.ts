@@ -64,6 +64,21 @@ describe('ticket wallet', () => {
     expect(wallet.ticketBalance()).toBe(3);
   });
 
+  it('keeps working when storage refuses a read', () => {
+    const wallet = createTicketWallet({
+      getItem: () => {
+        throw new Error('SecurityError');
+      },
+      setItem: () => {},
+    });
+    expect(wallet.ticketBalance()).toBe(0);
+    expect(wallet.earnTickets(0)).toBe(0);
+    expect(wallet.earnTickets(5)).toBe(5);
+    expect(wallet.spendTickets(2)).toBe(true);
+    expect(wallet.spendTickets(4)).toBe(false);
+    expect(wallet.ticketBalance()).toBe(3);
+  });
+
   it('rejects negative and fractional counts', () => {
     const wallet = createTicketWallet(memoryStorage());
     expect(() => wallet.earnTickets(-1)).toThrow();

@@ -26,7 +26,17 @@ export function createTicketWallet(storage: TicketStorage) {
   let store = storage;
 
   function ticketBalance(): number {
-    const parsed = Number(store.getItem(STORAGE_KEY) ?? 0);
+    let raw: string | null;
+    try {
+      raw = store.getItem(STORAGE_KEY);
+    } catch {
+      // Storage can refuse a read, for example when it becomes blocked. The
+      // midway and the end of a round must still work, so start from 0 and
+      // keep tickets for this page load only.
+      store = memoryStorage();
+      raw = null;
+    }
+    const parsed = Number(raw ?? 0);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
   }
 
