@@ -47,6 +47,9 @@ export const palette = {
   closed: '#a99cc4',
   closedShade: '#8a7daa',
   white: '#ffffff',
+  topHat: '#2b2238',
+  alien: '#7ed957',
+  alienShade: '#5cb83a',
 
   skins: ['#f1c27d', '#c68642', '#8d5524', '#e0ac69', '#ffdbac'],
   hairs: ['#3b2219', '#1b1035', '#a55728', '#e6c35c', '#6b4429'],

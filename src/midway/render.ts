@@ -786,12 +786,79 @@ function wagon(ctx: Ctx, prop: Prop) {
   }
 }
 
+/** Draws a hat from the hat stall on a head at (x, y - 20.5). */
+function hat(ctx: Ctx, x: number, y: number, id: string, back: boolean, dir: number, spin: number) {
+  if (id === 'propeller-beanie') {
+    ctx.fillStyle = palette.blue;
+    ctx.beginPath();
+    ctx.arc(x, y - 22, 4.5, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = palette.red;
+    ctx.beginPath();
+    ctx.arc(x, y - 22, 4.5, Math.PI * 1.33, Math.PI * 1.67);
+    ctx.lineTo(x, y - 22);
+    ctx.fill();
+    stroke(
+      ctx,
+      [
+        [x, y - 26.5],
+        [x, y - 28.5],
+      ],
+      palette.metalShade,
+      1,
+    );
+    // The blades turn as the player walks: their width follows the spin.
+    const reach = Math.cos(spin * 4) * 4.5;
+    stroke(
+      ctx,
+      [
+        [x - reach, y - 28.5],
+        [x + reach, y - 28.5],
+      ],
+      palette.gold,
+      1.6,
+    );
+    oval(ctx, x, y - 28.6, 0.9, 0.9, palette.red);
+  } else if (id === 'top-hat') {
+    oval(ctx, x, y - 23.5, 6.5, 1.8, palette.topHat);
+    ctx.fillStyle = palette.topHat;
+    ctx.fillRect(x - 3.6, y - 32, 7.2, 8.5);
+    oval(ctx, x, y - 32, 3.6, 1.2, palette.topHat);
+    ctx.fillStyle = palette.red;
+    ctx.fillRect(x - 3.6, y - 26, 7.2, 1.8);
+  } else if (id === 'alien-mask') {
+    ctx.fillStyle = palette.alien;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 21.5, 4.8, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = palette.alienShade;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 17.8, 2.6, 1.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (!back) {
+      for (const side of [-1, 1]) {
+        ctx.fillStyle = palette.ink;
+        ctx.beginPath();
+        ctx.ellipse(x + side * 2 + dir * 0.6, y - 21.5, 1.6, 2.4, side * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
 function person(
   ctx: Ctx,
   x: number,
   y: number,
   look: Look,
-  options: { swing?: number; back?: boolean; dir?: number; player?: boolean; t?: number } = {},
+  options: {
+    swing?: number;
+    back?: boolean;
+    dir?: number;
+    player?: boolean;
+    t?: number;
+    spin?: number;
+  } = {},
 ) {
   const swing = options.swing ?? 0;
   const dir = options.dir ?? 1;
@@ -853,7 +920,8 @@ function person(
     oval(ctx, x - 1.5 + dir, y - 20.3, 0.6, 0.7, palette.ink);
     oval(ctx, x + 1.5 + dir, y - 20.3, 0.6, 0.7, palette.ink);
   }
-  if (look.cap) {
+  if (look.hat) hat(ctx, x, y, look.hat, options.back ?? false, dir, options.spin ?? 0);
+  else if (look.cap) {
     ctx.fillStyle = look.cap;
     ctx.beginPath();
     ctx.arc(x, y - 22, 4.4, Math.PI, Math.PI * 2);
@@ -871,7 +939,8 @@ function person(
       );
   }
   if (options.player) {
-    const hop = Math.sin((options.t ?? 0) * 5) * 1.5;
+    // Float the marker clear of a tall hat.
+    const hop = Math.sin((options.t ?? 0) * 5) * 1.5 - (look.hat === 'top-hat' ? 6 : 0);
     poly(
       ctx,
       [
@@ -1596,6 +1665,8 @@ export interface Look {
   shirt: string;
   pants: string;
   cap?: string;
+  /** The id of a hat from the hat stall, drawn in place of the cap. */
+  hat?: string;
 }
 
 export function visitorLook(n: number): Look {
@@ -1624,6 +1695,7 @@ export function drawWalker(ctx: Ctx, walker: Walker, look: Look, player = false,
     dir: walker.flipped ? -1 : 1,
     player,
     t,
+    spin: walker.stride,
   });
 }
 

@@ -79,6 +79,20 @@ describe('hat shop', () => {
     expect(shop.ownsHat('propeller-beanie')).toBe(true);
   });
 
+  it('remembers the worn hat without reading storage again', () => {
+    const storage = memoryStorage();
+    const { shop } = shopWith(3, storage);
+    shop.buyHat('propeller-beanie');
+    shop.wearHat('propeller-beanie');
+    let reads = 0;
+    const counted = { ...storage, getItem: (key: string) => (reads++, storage.getItem(key)) };
+    const reloaded = createHatShop(counted, createTicketWallet(memoryStorage()));
+    reads = 0;
+    expect(reloaded.wornHat()).toBe('propeller-beanie');
+    expect(reloaded.wornHat()).toBe('propeller-beanie');
+    expect(reads).toBe(0);
+  });
+
   it('keeps owned hats and the worn hat across page loads', () => {
     const storage = memoryStorage();
     const { shop } = shopWith(8, storage);

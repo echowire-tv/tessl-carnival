@@ -1,3 +1,4 @@
+import { hatShop } from '../carnival';
 import { palette } from './palette';
 import {
   archBounds,
@@ -383,7 +384,7 @@ export function startMidway(canvas: HTMLCanvasElement, options: MidwayOptions): 
       {
         depth: playerDepth,
         box: walkerBox(player),
-        draw: () => drawWalker(ctx, player, PLAYER_LOOK, true, t),
+        draw: () => drawWalker(ctx, player, { ...PLAYER_LOOK, hat: hatShop.wornHat() }, true, t),
       },
     ];
     for (const item of scenery) {
