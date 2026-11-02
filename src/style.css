@@ -272,3 +272,34 @@ kbd {
   cursor: crosshair;
   touch-action: none;
 }
+
+.hat-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hat-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hat-list button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-background);
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.hat-list button:disabled {
+  background: var(--color-muted);
+  cursor: not-allowed;
+}

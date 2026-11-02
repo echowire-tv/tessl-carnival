@@ -1,5 +1,5 @@
 import './style.css';
-import { applyTheme, bestScore, ticketBalance, type CarnivalGame } from './carnival';
+import { applyTheme, bestScore, HATS, hatShop, ticketBalance, type CarnivalGame } from './carnival';
 import { registry } from './games';
 import { startMidway } from './midway/midway';
 import type { BoothSlot } from './midway/world';
@@ -28,7 +28,7 @@ function renderMidway() {
       <p class="midway-help">
         <span class="midway-tickets"></span><br />
         <kbd>WASD</kbd> or <kbd>arrows</kbd> to walk, or click where you want to go.
-        <kbd>E</kbd> to play.
+        <kbd>E</kbd> to play, or to shop at the hat stall.
       </p>
       <p class="midway-credit">
         Built with
@@ -54,6 +54,12 @@ function renderMidway() {
         <p class="description"></p>
         <p class="best"></p>
         <a class="play">Play</a>
+      </div>
+      <div class="booth-card hat-shop" aria-live="polite" hidden>
+        <h2>Hat stall</h2>
+        <p class="description">Spend your tickets on a hat. Walk away to close.</p>
+        <p class="best hat-balance"></p>
+        <ul class="hat-list"></ul>
       </div>
     </section>`;
 
@@ -90,10 +96,54 @@ function renderMidway() {
     if (game) link.href = `#/play/${game.id}`;
   };
 
+  const shop = app.querySelector<HTMLElement>('.hat-shop')!;
+  const renderShop = () => {
+    const balance = ticketBalance();
+    shop.querySelector('.hat-balance')!.textContent = ticketText();
+    app.querySelector('.midway-tickets')!.textContent = ticketText();
+    const list = shop.querySelector('.hat-list')!;
+    list.replaceChildren();
+    const worn = hatShop.wornHat();
+    for (const hat of HATS) {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = hat.name;
+      const button = document.createElement('button');
+      button.type = 'button';
+      if (hatShop.ownsHat(hat.id)) {
+        const wearing = worn === hat.id;
+        button.textContent = wearing ? 'Take off' : 'Wear';
+        button.addEventListener('click', () => {
+          if (wearing) hatShop.takeOffHat();
+          else hatShop.wearHat(hat.id);
+          renderShop();
+        });
+      } else {
+        button.textContent = `Buy for 🎟 ${hat.price}`;
+        button.disabled = hat.price > balance;
+        button.addEventListener('click', () => {
+          hatShop.buyHat(hat.id);
+          renderShop();
+        });
+      }
+      item.append(name, button);
+      list.append(item);
+    }
+  };
+  const openShop = () => {
+    renderShop();
+    shop.hidden = false;
+  };
+
   const midway = startMidway(app.querySelector('canvas')!, {
     games: registry.all(),
     onPlay: (gameId) => (location.hash = `#/play/${gameId}`),
     onReach: showBooth,
+    onShop: openShop,
+    onHatCartReach: (inReach) => {
+      if (!inReach) shop.hidden = true;
+    },
   });
   stop = midway.stop;
 }

@@ -8,5 +8,6 @@ export {
   ticketsForScore,
   type TicketWallet,
 } from './tickets';
+export { HATS, hatShop, createHatShop, type Hat, type HatShop } from './hats';
 export { prizeFor, type PrizeTier } from './prizes';
 export { theme, canvasFont, applyTheme } from './theme';

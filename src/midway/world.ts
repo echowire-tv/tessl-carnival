@@ -72,7 +72,14 @@ export interface MidwayMap {
   spawn: Point;
 }
 
-export const CART_KINDS = ['Popcorn', 'Cotton candy', 'Ice cream', 'Drinks'] as const;
+export const CART_KINDS = ['Popcorn', 'Cotton candy', 'Hats', 'Drinks'] as const;
+
+/** Which cart variant is the hat stall. */
+export const HAT_CART = CART_KINDS.indexOf('Hats');
+
+export function isHatCart(prop: Prop): boolean {
+  return prop.kind === 'cart' && prop.variant % CART_KINDS.length === HAT_CART;
+}
 
 const MAP_WIDTH = 24;
 const AVENUE_X = 11;
@@ -445,8 +452,27 @@ export function boothInReach(
   return nearest;
 }
 
-/** A walk to the open tile beside a booth that is closest to `from`. */
-export function pathToBooth(map: MidwayMap, from: Point, booth: BoothSlot): Point[] | undefined {
+/** The hat cart the walker is close enough to shop at, if any. */
+export function hatCartInReach(
+  map: MidwayMap,
+  point: Point,
+  reach = BOOTH_REACH,
+): Prop | undefined {
+  let nearest: Prop | undefined;
+  let nearestDistance = reach;
+  for (const prop of map.props) {
+    if (!isHatCart(prop)) continue;
+    const distance = distanceToRect(point, prop);
+    if (distance <= nearestDistance) {
+      nearest = prop;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
+/** A walk to the open tile beside a booth (or a cart) that is closest to `from`. */
+export function pathToBooth(map: MidwayMap, from: Point, booth: Rect): Point[] | undefined {
   let best: Point[] | undefined;
   let bestLength = Infinity;
   for (let y = booth.y - 1; y <= booth.y + booth.h; y++) {
