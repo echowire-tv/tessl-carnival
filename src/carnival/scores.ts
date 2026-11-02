@@ -1,3 +1,5 @@
+import { ticketsForScore, wallet, type TicketWallet } from './tickets';
+
 export interface ScoreEntry {
   gameId: string;
   score: number;
@@ -18,7 +20,15 @@ function memoryStorage(): ScoreStorage {
   };
 }
 
-export function createScoreBoard(storage: ScoreStorage, now: () => number = Date.now) {
+/**
+ * When a `tickets` wallet is given, every recorded score also earns one ticket
+ * for each full 100 points.
+ */
+export function createScoreBoard(
+  storage: ScoreStorage,
+  now: () => number = Date.now,
+  tickets?: Pick<TicketWallet, 'earnTickets'>,
+) {
   let store = storage;
 
   function load(): ScoreEntry[] {
@@ -53,6 +63,7 @@ export function createScoreBoard(storage: ScoreStorage, now: () => number = Date
       store = memoryStorage();
       store.setItem(STORAGE_KEY, value);
     }
+    tickets?.earnTickets(ticketsForScore(entry.score));
     return entry;
   }
 
@@ -72,9 +83,9 @@ function browserStorage(): ScoreStorage {
   }
 }
 
-const board = createScoreBoard(browserStorage());
+const board = createScoreBoard(browserStorage(), Date.now, wallet);
 
-/** Every game reports its final score through here. */
+/** Every game reports its final score through here. It also awards the round's tickets. */
 export const recordScore = board.record;
 export const bestScore = board.best;
 export const topScores = board.top;

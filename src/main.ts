@@ -1,5 +1,5 @@
 import './style.css';
-import { applyTheme, bestScore, type CarnivalGame } from './carnival';
+import { applyTheme, bestScore, ticketBalance, type CarnivalGame } from './carnival';
 import { registry } from './games';
 import { startMidway } from './midway/midway';
 import type { BoothSlot } from './midway/world';
@@ -15,12 +15,18 @@ function bestText(game: CarnivalGame): string {
   return best === undefined ? 'No scores yet' : `Best: ${best}`;
 }
 
+function ticketText(): string {
+  const balance = ticketBalance();
+  return `🎟 ${balance} ${balance === 1 ? 'ticket' : 'tickets'}`;
+}
+
 function renderMidway() {
   document.body.dataset.view = 'midway';
   app.innerHTML = `
     <section class="midway">
       <canvas class="midway-map" aria-label="The carnival midway. Walk up to a booth to play its game."></canvas>
       <p class="midway-help">
+        <span class="midway-tickets"></span><br />
         <kbd>WASD</kbd> or <kbd>arrows</kbd> to walk, or click where you want to go.
         <kbd>E</kbd> to play.
       </p>
@@ -50,6 +56,8 @@ function renderMidway() {
         <a class="play">Play</a>
       </div>
     </section>`;
+
+  app.querySelector('.midway-tickets')!.textContent = ticketText();
 
   const link = carnivalLink(location.href);
   if (link) {
